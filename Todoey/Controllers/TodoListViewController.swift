@@ -91,15 +91,45 @@ class TodoListViewController: UITableViewController {
         self.tableView.reloadData()
     }
     
-    func loadItems() {
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
         // You have to specify the data type in this case, because it can be ambiguous
-        let request: NSFetchRequest<Item> = Item.fetchRequest()
+        // let request: NSFetchRequest<Item> = Item.fetchRequest()
         
         do {
             itemArray = try context.fetch(request)
+            self.tableView.reloadData()
         } catch {
             print("Error fetching data from request: \(error)")
         }
     }
 }
 
+// MARK: - Search bar methods
+
+extension TodoListViewController: UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request: NSFetchRequest<Item> = Item.fetchRequest()
+        
+        // The argument will substitute the "%@" in the format
+        // The "[cd]" turns the predicate into case and diacritic insensitive
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+        // Sorting the data that comes back from the query
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadItems(with: request)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            // The DispatchQueue is the manager who assigns the projects to different threads
+            // .main corresponds to the main thread
+            DispatchQueue.main.async {
+                // No longer selected
+                searchBar.resignFirstResponder()
+            }
+        }
+    }
+}
